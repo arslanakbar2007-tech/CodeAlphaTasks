@@ -1,0 +1,52 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+plt.style.use('seaborn-v0_8-whitegrid')
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['font.size'] = 10
+def generate_business_data(samples=500):
+    np.random.seed(42)
+    dates = pd.date_range(start='2025-01-01', periods=samples, freq='D')
+    categories = ['Electronics', 'Fashion', 'Home & Kitchen', 'Beauty']
+    region = ['North', 'South', 'East', 'West']
+    data = {
+        'Date': dates,
+        'Category': np.random.choice(categories, size=samples, p=[0.35, 0.25, 0.25, 0.15]),
+        'Region': np.random.choice(region, size=samples),
+        'Sales_Amount': np.random.normal(loc=250, scale=80, size=samples).round(2),
+        'Discount_Pct': np.random.uniform(0.05, 0.30, size=samples).round(2),
+        'Customer_Satisfaction': np.random.choice([1, 2, 3, 4, 5], size=samples, p=[0.05, 0.1, 0.2, 0.45, 0.2])
+    }
+    df = pd.DataFrame(data)
+    df['Profit'] = (df['Sales_Amount'] * (1 - df['Discount_Pct']) * 0.4).round(2)
+    return df
+def build_data_story_dashboard(df):
+    """Creates a compelling multi-panel executive visual dashboard."""
+    fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+    fig.suptitle('Executive Business Performance & Data Story Dashboard', fontsize=18, fontweight='bold', y=0.98)
+    monthly = df.set_index('Date').resample('M')['Sales_Amount'].sum().reset_index()
+    axes[0, 0].plot(monthly['Date'].dt.strftime('%b %Y'), monthly['Sales_Amount'], marker='o', color='#1f77b4', linewidth=2.5)
+    axes[0, 0].set_title('1. Monthly Revenue Growth Trend', fontsize=12, fontweight='bold')
+    axes[0, 0].set_ylabel('Total Revenue ($)')
+    axes[0, 0].grid(True, linestyle='--', alpha=0.5)
+    sns.barplot(data=df, x='Category', y='Sales_Amount', hue='Region', ax=axes[0, 1], palette='Blues_d', ci=None)
+    axes[0, 1].set_title('2. Average Sales by Category & Region', fontsize=12, fontweight='bold')
+    axes[0, 1].set_ylabel('Avg Sales ($)')
+    axes[0, 1].set_xlabel('')
+    sns.scatterplot(data=df, x='Discount_Pct', y='Profit', hue='Category', size='Sales_Amount', sizes=(20, 200), ax=axes[1, 0], palette='Set2', alpha=0.8)
+    axes[1, 0].set_title('3. Discount Impact on Profit Margin', fontsize=12, fontweight='bold')
+    axes[1, 0].set_xlabel('Discount Percentage (%)')
+    axes[1, 0].set_ylabel('Profit ($)')
+    rating_counts = df['Customer_Satisfaction'].value_counts().sort_index()
+    colors = ['#ff9999','#66b3ff','#99ff99','#ffcc99','#c2c1f0']
+    axes[1, 1].pie(rating_counts, labels=[f'{r} Stars' for r in rating_counts.index], autopct='%1.1f%%', startangle=140, colors=colors, wedgeprops=dict(width=0.4))
+    axes[1, 1].set_title('4. Customer Satisfaction Distribution', fontsize=12, fontweight='bold')
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    output_filename = "business_visualization_dashboard.png"
+    plt.savefig(output_filename, dpi=300)
+    print(f"[SUCCESS] Dashboard exported successfully as '{output_filename}'")
+    plt.show()
+if __name__ == "__main__":
+    df_raw = generate_business_data()
+    build_data_story_dashboard(df_raw)
