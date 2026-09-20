@@ -1,0 +1,113 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
+sns.set_theme(style="whitegrid")
+plt.rcParams.update({'font.size': 10})
+class ExploratoryDataAnalysisPipeline:
+    def __init__(self, filepath="final_scraped_quotes.csv"):
+        self.filepath = filepath
+        self.df = None
+    def load_and_inspect_structure(self):
+        """Step 1: Explore Data Structure, Variables, and Data Types"""
+        print("="*60)
+        print("STEP 1: DATA STRUCTURE EXPLORATION")
+        print("="*60)
+        try:
+            self.df = pd.read_csv(self.filepath)
+            print(f"[+] Dataset loaded successfully from {self.filepath}")
+        except FileNotFoundError:
+            print("[-] File not found. Generating synthetic dataset based on Task 1 structure...")
+            data = {
+                'Quote': [
+                    "The world as we have created it is a process of our thinking.",
+                    "It is our choices, Harry, that show what we truly are.",
+                    "There are only two ways to live your life. One is as though nothing is a miracle.",
+                    "The person, be it gentleman or lady, who has not pleasure in a good novel, must be intolerably stupid.",
+                    "Imperfection is beauty, madness is genius and it's better to be absolutely ridiculous than absolutely boring."
+                ] * 10,
+                'Author': ["Albert Einstein", "J.K. Rowling", "Albert Einstein", "Jane Austen", "Marilyn Monroe"] * 10,
+                'Tags': ["change, deep", "choices, character", "life, inspirational", "reading, classic", "inspirational, truth"] * 10,
+                'Word_Count': [11, 12, 16, 17, 16] * 10,
+                'Char_Length': [62, 53, 83, 103, 107] * 10
+            }
+            self.df = pd.DataFrame(data)
+        print("\n--- Data Dimensions ---")
+        print(f"Rows: {self.df.shape[0]}, Columns: {self.df.shape[1]}")
+        print("\n--- Column Data Types & Non-Null Values ---")
+        print(self.df.info())
+        print("\n--- Summary Statistics (Numerical Features) ---")
+        print(self.df.describe())
+        print("\n--- Summary Statistics (Categorical Features) ---")
+        print(self.df.describe(include=['O']))
+    def detect_data_issues_and_anomalies(self):
+        """Step 2: Detect Potential Data Issues, Anomalies, & Outliers"""
+        print("\n" + "="*60)
+        print("STEP 2: DETECTING DATA ISSUES & ANOMALIES")
+        print("="*60)
+        missing = self.df.isnull().sum()
+        print("\n[1] Missing Value Count:")
+        print(missing[missing > 0] if missing.sum() > 0 else "No missing values found.")
+        duplicates = self.df.duplicated().sum()
+        print(f"\n[2] Duplicate Records: {duplicates}")
+        Q1 = self.df['Char_Length'].quantile(0.25)
+        Q3 = self.df['Char_Length'].quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+        outliers = self.df[(self.df['Char_Length'] < lower_bound) | (self.df['Char_Length'] > upper_bound)]
+        print(f"\n[3] Outlier Detection (IQR Method on Char_Length):")
+        print(f"    IQR: {IQR:.2f} | Bounds: [{lower_bound:.2f}, {upper_bound:.2f}]")
+        print(f"    Outliers Detected: {len(outliers)} row(s)")
+    def hypothesis_testing(self):
+        """Step 3: Test Hypotheses using Inferential Statistics"""
+        print("\n" + "="*60)
+        print("STEP 3: HYPOTHESIS TESTING & STATISTICAL VALIDATION")
+        print("="*60)
+        print("HYPOTHESIS 1:")
+        print("H0 (Null): There is no correlation between Word Count and Character Length.")
+        print("H1 (Alternative): There is a significant linear correlation between Word Count and Character Length.")
+        corr, p_value = stats.pearsonr(self.df['Word_Count'], self.df['Char_Length'])
+        print(f"--> Pearson Correlation Coefficient: {corr:.4f}")
+        print(f"--> P-value: {p_value:.4e}")
+        if p_value < 0.05:
+            print("[RESULT] Reject Null Hypothesis (H0). Significant positive correlation exists.")
+        else:
+            print("[RESULT] Fail to Reject Null Hypothesis (H0).")
+    def generate_visualizations(self):
+        """Step 4: Create Exploratory Charts & Graphs"""
+        print("\n" + "="*60)
+        print("STEP 4: GENERATING EDA VISUALIZATIONS")
+        print("="*60)
+        fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+        fig.suptitle('Exploratory Data Analysis (EDA) Dashboard', fontsize=16, fontweight='bold')
+        sns.histplot(self.df['Char_Length'], kde=True, ax=axes[0, 0], color='skyblue')
+        axes[0, 0].set_title('1. Distribution of Quote Character Length')
+        axes[0, 0].set_xlabel('Character Length')
+        axes[0, 0].set_ylabel('Frequency')
+        top_authors = self.df['Author'].value_counts().head(5)
+        sns.barplot(x=top_authors.values, y=top_authors.index, ax=axes[0, 1], palette='viridis')
+        axes[0, 1].set_title('2. Top 5 Most Frequent Authors')
+        axes[0, 1].set_xlabel('Quote Count')
+        axes[0, 1].set_ylabel('Author Name')
+        sns.scatterplot(x='Word_Count', y='Char_Length', data=self.df, ax=axes[1, 0], color='coral', alpha=0.7)
+        sns.regplot(x='Word_Count', y='Char_Length', data=self.df, ax=axes[1, 0], scatter=False, color='red')
+        axes[1, 0].set_title('3. Word Count vs Character Length (Linear Regression)')
+        axes[1, 0].set_xlabel('Word Count')
+        axes[1, 0].set_ylabel('Character Length')
+        sns.boxplot(x='Word_Count', y='Author', data=self.df, order=top_authors.index, ax=axes[1, 1], palette='Set2')
+        axes[1, 1].set_title('4. Word Count Distribution by Top Authors')
+        axes[1, 1].set_xlabel('Word Count')
+        axes[1, 1].set_ylabel('Author')
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.92)
+        plt.savefig('eda_visualizations_dashboard.png', dpi=300)
+        print("[+] EDA Visualizations saved as 'eda_visualizations_dashboard.png'")
+        plt.show()
+if __name__ == "__main__":
+    pipeline = ExploratoryDataAnalysisPipeline()
+    pipeline.load_and_inspect_structure()
+    pipeline.detect_data_issues_and_anomalies()
+    pipeline.hypothesis_testing()
+    pipeline.generate_visualizations()
